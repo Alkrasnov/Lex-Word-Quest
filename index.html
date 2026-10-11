@@ -358,6 +358,12 @@ details.topics li span{font-family:var(--pixel);font-size:9px;color:var(--azure)
 .slotb{background:rgba(7,44,77,.5);border:2px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:5px 4px;display:flex;flex-direction:column;gap:2px;align-items:center;min-width:0}
 .slotb b{font-family:var(--pixel);font-size:10px;font-weight:400;color:var(--ltl-yellow)}.slotb small{font-size:10px;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .slotb.on{background:var(--ltl-yellow);color:var(--ltl-blue);border-color:#fff}.slotb.on b{color:var(--ltl-blue)}
+.slotx{grid-column:1/-1;justify-self:center;font-size:12px;margin-top:2px}
+.xfer{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.xfer .bigbtn{flex:1;min-width:140px;margin:0;font-size:14px}
+.xfer input{flex:1;min-width:140px;font:inherit;font-size:16px;letter-spacing:2px;text-transform:uppercase;padding:8px 10px;border-radius:8px;border:0}
+.cid{flex:1;min-width:140px;background:#072c4d;border:2px dashed var(--ltl-yellow);border-radius:8px;padding:8px;text-align:center;font-family:var(--pixel);font-size:16px;letter-spacing:3px;color:var(--ltl-yellow);user-select:all}
+#codeBox{width:100%;box-sizing:border-box;font-family:monospace;font-size:11px;border-radius:8px;border:0;padding:8px;margin:4px 0}
+.slotpick{background:rgba(7,44,77,.5);border-radius:10px;padding:10px;margin-top:8px}.slotpick p{margin:0 0 6px;font-weight:600}
 #lqLoad{position:fixed;inset:0;z-index:9000;background:rgba(5,24,43,.55);display:flex;align-items:center;justify-content:center}
 #lqLoad .lqbox{background:#1070B6;border:3px solid #fff;border-radius:14px;padding:18px 22px;color:#fff;text-align:center;min-width:240px;font-family:Poppins,system-ui,sans-serif}
 #lqLoad .lqmsg{margin-bottom:10px;font-weight:600}
@@ -3024,9 +3030,73 @@ function slotData(n){try{return JSON.parse(localStorage.getItem(slotKey(n)))||{}
 function slotLangs(d){return Object.keys(d).filter(k=>!k.startsWith('_')&&d[k]&&d[k].lv)}
 function slotSummary(n){const d=slotData(n),ls=slotLangs(d);return ls.length?ls.map(c=>`${LANGS[c]?LANGS[c].native:c} Lv ${d[c].lv}`).join(', '):'Empty'}
 function switchSlot(n,pending){try{if(pending)localStorage.setItem('ltl-lex-pending',JSON.stringify(pending));localStorage.setItem('ltl-lex-slot',n)}catch(e){}location.reload()}
+/* ===== Moving saves between devices, versions and websites =====
+   File / code: works everywhere, no server. Save ID: stored online (Cloudflare Worker) under a 10-character ID. */
+const CLOUD_URL='https://lex-saves.zhaofengoffice.workers.dev';   // set to the Cloudflare Worker address to switch on save IDs
+const SAVE_APP='lex-word-quest';
+function exportSlot(n){return{app:SAVE_APP,v:1,slot:n,ts:Date.now(),data:slotData(n)}}
+async function packCode(obj){const txt=JSON.stringify(obj);
+  try{if(window.CompressionStream){const cs=new Blob([txt]).stream().pipeThrough(new CompressionStream('gzip'));const buf=new Uint8Array(await new Response(cs).arrayBuffer());let bin='';for(let i=0;i<buf.length;i+=8192)bin+=String.fromCharCode.apply(null,buf.subarray(i,i+8192));return 'LEX1:'+btoa(bin)}}catch(e){}
+  return 'LEX0:'+btoa(unescape(encodeURIComponent(txt)))}
+async function unpackCode(code){code=(code||'').trim();
+  if(code.startsWith('{'))return JSON.parse(code);
+  if(code.startsWith('LEX1:')){const bin=atob(code.slice(5).replace(/\s/g,'')),buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
+    const ds=new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));return JSON.parse(await new Response(ds).text())}
+  if(code.startsWith('LEX0:'))return JSON.parse(decodeURIComponent(escape(atob(code.slice(5).replace(/\s/g,'')))));
+  throw new Error('format')}
+function validSave(o){return o&&o.app===SAVE_APP&&o.data&&typeof o.data==='object'}
+function importInto(o,n){if(!validSave(o))throw new Error('format');
+  const sum=slotLangs(o.data).map(c=>`${LANGS[c]?LANGS[c].native:c} Lv ${o.data[c].lv}`).join(', ')||'an empty save';
+  const cur=slotSummary(n);
+  if(cur!=='Empty'&&!confirm(`Replace slot ${n} (${cur}) with this save (${sum})?`))return false;
+  if(cur==='Empty'&&!confirm(`Load this save (${sum}) into slot ${n}?`))return false;
+  try{localStorage.setItem(slotKey(n),JSON.stringify(o.data))}catch(e){alert('Could not save on this device. Storage may be full or blocked.');return false}
+  switchSlot(n);return true}
+function showSaveTransfer(){
+  document.querySelector('.tin .sub').hidden=true;langsBox.className='setgroup';
+  const cloudOn=!!CLOUD_URL,cid=(saves._cloud&&saves._cloud.id)||'';
+  langsBox.innerHTML=`<button class="back" id="backBtn">Back</button><h3>Back up or move a save</h3>
+   <p class="note" style="text-align:left">Use this to move your progress to another phone or computer, or to a new version of the game. You're working with save slot ${SLOT} (${esc(slotSummary(SLOT))}).</p>
+   <h3>Save ID</h3>
+   ${cloudOn?`<p class="note" style="text-align:left">Get a 10-character ID, then type it on your other device to bring your progress over. Getting the ID again later updates the saved copy.</p>
+     <div class="xfer"><button class="bigbtn" id="cloudGet">${cid?'Update my save ID':'Get my save ID'}</button>${cid?`<div class="cid" id="cidBox">${esc(cid)}</div>`:'<div class="cid" id="cidBox" hidden></div>'}</div>
+     <div class="xfer"><input id="cloudIn" maxlength="12" placeholder="Enter a save ID" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="bigbtn alt" id="cloudLoad">Load</button></div>`
+   :`<p class="note" style="text-align:left">Save IDs work in the website version of the game. Here, use the save code below to move your progress.</p>`}
+   <h3>Save file or code</h3>
+   <div class="xfer"><button class="bigbtn alt" id="dlFile">Download save file</button><button class="bigbtn alt" id="cpCode">Copy save code</button></div>
+   <textarea id="codeBox" rows="4" placeholder="Paste a save code here, or tap Copy save code" spellcheck="false"></textarea>
+   <div class="xfer"><button class="bigbtn" id="pasteLoad">Load pasted code</button><button class="bigbtn alt" id="fileLoad">Load save file</button><input type="file" id="fileIn" accept=".json,.txt,application/json" hidden></div>
+   <p class="note">Loading asks which slot to use and never overwrites a slot without asking.</p>
+   <div class="slotpick" id="slotPick" hidden><p>Load into which slot?</p>${[1,2,3].map(n=>`<button class="win setbtn" data-into="${n}"><b>Slot ${n}</b><span class="e">${esc(slotSummary(n))}</span></button>`).join('')}<button class="linkbtn" id="pickCancel">Cancel</button></div>`;
+  document.getElementById('backBtn').onclick=buildTitle;
+  let pending=null;const pick=o=>{if(!validSave(o)){toast('That isn\'t a Lex\'s Word Quest save.');return}pending=o;document.getElementById('slotPick').hidden=false;document.getElementById('slotPick').scrollIntoView({behavior:'smooth'})};
+  langsBox.querySelectorAll('[data-into]').forEach(b=>b.onclick=()=>{if(pending)importInto(pending,+b.dataset.into)});
+  document.getElementById('pickCancel').onclick=()=>{pending=null;document.getElementById('slotPick').hidden=true};
+  document.getElementById('dlFile').onclick=()=>{try{const blob=new Blob([JSON.stringify(exportSlot(SLOT))],{type:'application/json'}),a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download=`lex-word-quest-save-slot${SLOT}-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}catch(e){toast('Downloading isn\'t possible here. Use Copy save code instead.')}};
+  document.getElementById('cpCode').onclick=async()=>{const code=await packCode(exportSlot(SLOT)),box=document.getElementById('codeBox');box.value=code;box.select();
+    try{await navigator.clipboard.writeText(code);toast(`Save code copied (${code.length.toLocaleString()} characters). Paste it somewhere safe, like a note or a message to yourself.`)}catch(e){toast('The code is in the box. Select it all and copy it.')}};
+  document.getElementById('pasteLoad').onclick=async()=>{try{pick(await unpackCode(document.getElementById('codeBox').value))}catch(e){toast('That code doesn\'t look right. Make sure you copied all of it.')}};
+  document.getElementById('fileLoad').onclick=()=>document.getElementById('fileIn').click();
+  document.getElementById('fileIn').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>unpackCode(t)).then(pick).catch(()=>toast('That file isn\'t a Lex\'s Word Quest save.'))};
+  if(cloudOn){
+    document.getElementById('cloudGet').onclick=async()=>{const b=document.getElementById('cloudGet');b.disabled=true;b.textContent='Saving…';
+      try{const body=JSON.stringify(exportSlot(SLOT)),c=saves._cloud;
+        let r=c&&c.id?await fetch(`${CLOUD_URL}/save/${c.id}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Edit-Key':c.key},body}):null;
+        if(!r||r.status===404||r.status===403)r=await fetch(`${CLOUD_URL}/save`,{method:'POST',headers:{'Content-Type':'application/json'},body});
+        const j=await r.json();if(!r.ok||!j.id)throw new Error(j.error||'save');
+        if(j.key)saves._cloud={id:j.id,key:j.key};persistPrefs();const box=document.getElementById('cidBox');box.hidden=false;box.textContent=j.id;b.textContent='Update my save ID';
+        try{await navigator.clipboard.writeText(j.id)}catch(e){}toast(`Your save ID is ${j.id}. Write it down or keep it in a note.`)}
+      catch(e){toast('Could not reach the save server. Please try again later, or use the save code.');b.textContent=saves._cloud?'Update my save ID':'Get my save ID'}b.disabled=false};
+    document.getElementById('cloudLoad').onclick=async()=>{const id=document.getElementById('cloudIn').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+      if(id.length!==10){toast('A save ID has 10 letters and numbers.');return}
+      try{const r=await fetch(`${CLOUD_URL}/load/${id}`);if(r.status===404){toast('No save found with that ID. Check it and try again.');return}if(!r.ok)throw 0;pick(await r.json())}
+      catch(e){toast('Could not reach the save server. Please try again later.')}}}
+}
 function slotBar(){const d=document.createElement('div');d.className='slotrow';
   d.innerHTML=`<span class="slotlab">Save slot</span>${[1,2,3].map(n=>`<button class="slotb${n===SLOT?' on':''}" data-slot="${n}"><b>${n}</b><small>${esc(slotSummary(n))}</small></button>`).join('')}`;
-  d.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>{const n=+b.dataset.slot;if(n!==SLOT)switchSlot(n)});return d}
+  d.innerHTML+=`<button class="linkbtn slotx" id="xferBtn">Back up or move a save</button>`;
+  d.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>{const n=+b.dataset.slot;if(n!==SLOT)switchSlot(n)});d.querySelector('#xferBtn').onclick=showSaveTransfer;return d}
 function newGameElsewhere(code,course,md,pr){
   const pend={code,course,md,pr,src:prefs.src||'en',unlock:!!saves._unlock};
   const empty=[1,2,3].find(n=>n!==SLOT&&!slotLangs(slotData(n)).length);
@@ -3681,7 +3751,7 @@ document.documentElement.lang={zh:'zh-Hans',ja:'ja',ko:'ko',vi:'vi'}[UIL()]||'en
 try{const pd=JSON.parse(localStorage.getItem('ltl-lex-pending')||'null');if(pd){localStorage.removeItem('ltl-lex-pending');prefs.src=pd.src;if(pd.unlock)saves._unlock=true;prefs.mode[pd.code]=pd.md;prefs.practice[pd.code]=pd.pr;persistPrefs();setTimeout(()=>{try{startGame(pd.code,pd.course)}catch(e){}},300)}}catch(e){}
 
 /* ===== Website build: language data is loaded on demand from data/<lang>.js ===== */
-const LQ_VER='202610110317',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
+const LQ_VER='202610110351',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
 function lqClearCaches(){[poolCache,fullCache,bankCache,exIndex,trCache].forEach(c=>{if(c)for(const k in c)delete c[k]})}
 window.LQ_LOAD=function(lg,d){if(d.SBANK)SBANK[lg]=d.SBANK;if(d.EXB)EXB[lg]=d.EXB;if(d.TOPIC)TOPIC.data[lg]=d.TOPIC;if(d.BIG)BIG[lg]=d.BIG;if(d.TATO)TATO[lg]=d.TATO;
   if(d.SETS)Object.assign(SETS_DATA,d.SETS);if(d.TRAD)Object.assign(TRAD,d.TRAD);lqClearCaches();LQ_READY[lg]=true;(LQ_WAIT[lg]||[]).splice(0).forEach(f=>f())};
