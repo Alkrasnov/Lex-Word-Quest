@@ -2766,11 +2766,11 @@ function showWord(w){
   rb.hidden=!LANGS[lang].rom;rb.textContent=(prefs.showRom?'Hide ':'Show ')+LANGS[lang].rom;
   if(mode()==='recall'){
     el.textContent=w.m;el.removeAttribute('lang');el.className='latin'+(practice()==='sentences'?' sentence':'');rd.innerHTML='';
-    ex.innerHTML=exampleHtml(w,false);
+    ex.innerHTML='';   // examples only appear when the player taps "Example sentence"
   }else{
     el.textContent=disp(w.t);el.lang=LANGS[lang].html;el.className=(LANGS[lang].latin?'latin':'')+(practice()==='sentences'?' sentence':'');el.dir='auto';
     rd.innerHTML=(LANGS[lang].rom&&prefs.showRom)?(w.k?`<span class="kana" lang="ja">${esc(w.k)}</span>`:'')+esc(w.r):'';
-    ex.innerHTML=exampleHtml(w,false);
+    ex.innerHTML='';   // examples only appear when the player taps "Example sentence"
   }
 }
 function bubbleHtml(o){
@@ -3681,7 +3681,7 @@ document.documentElement.lang={zh:'zh-Hans',ja:'ja',ko:'ko',vi:'vi'}[UIL()]||'en
 try{const pd=JSON.parse(localStorage.getItem('ltl-lex-pending')||'null');if(pd){localStorage.removeItem('ltl-lex-pending');prefs.src=pd.src;if(pd.unlock)saves._unlock=true;prefs.mode[pd.code]=pd.md;prefs.practice[pd.code]=pd.pr;persistPrefs();setTimeout(()=>{try{startGame(pd.code,pd.course)}catch(e){}},300)}}catch(e){}
 
 /* ===== Website build: language data is loaded on demand from data/<lang>.js ===== */
-const LQ_VER='202610110237',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
+const LQ_VER='202610110317',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
 function lqClearCaches(){[poolCache,fullCache,bankCache,exIndex,trCache].forEach(c=>{if(c)for(const k in c)delete c[k]})}
 window.LQ_LOAD=function(lg,d){if(d.SBANK)SBANK[lg]=d.SBANK;if(d.EXB)EXB[lg]=d.EXB;if(d.TOPIC)TOPIC.data[lg]=d.TOPIC;if(d.BIG)BIG[lg]=d.BIG;if(d.TATO)TATO[lg]=d.TATO;
   if(d.SETS)Object.assign(SETS_DATA,d.SETS);if(d.TRAD)Object.assign(TRAD,d.TRAD);lqClearCaches();LQ_READY[lg]=true;(LQ_WAIT[lg]||[]).splice(0).forEach(f=>f())};
