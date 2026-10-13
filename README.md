@@ -1,4 +1,4 @@
-# Lex's Word Quest: website version (build 202610130756)
+# Lex's Word Quest: website version (build 202610130824)
 
 ## What's in this folder
 - `index.html`: the game itself (menus, maps, battles, art, music, interface translations).

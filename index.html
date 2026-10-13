@@ -307,6 +307,7 @@ details.topics ul{margin:4px 0 0;padding-left:0;list-style:none;display:grid;gri
 details.topics li{display:flex;justify-content:space-between;border-bottom:1px dotted rgba(255,255,255,.25);padding:2px 0}
 details.topics li span{font-family:var(--pixel);font-size:9px;color:var(--azure)}
 .bulk{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 8px}
+.mixnote{margin:-4px 0 6px;text-align:left;font-size:12px}
 .lvls{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .lvl{background:rgba(7,44,77,.5);border:2px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:2px}
 .lvl b{font-family:var(--pixel);font-size:10px;font-weight:400;color:var(--ltl-yellow)}.lvl span{font-size:10px;line-height:1.15;text-align:center}
@@ -367,6 +368,20 @@ details.topics li span{font-family:var(--pixel);font-size:9px;color:var(--azure)
 .sitem.locked{opacity:.75}.sitem.locked canvas{background:#5a7a9a}
 .loot{background:rgba(7,44,77,.45);border-radius:10px;padding:8px}.loot small{opacity:.85}
 .lg{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:700;margin:2px}.lg.l1{background:#5ad1ff;color:#0a3a5a}.lg.l3{background:#ff6b8a;color:#4a0a1a}.lg.l5{background:#ffe36b;color:#5a3a00}
+[lang="vi"],.lang-vi,.lang .nat-vi{font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Noto Sans',Arial,sans-serif!important}
+/* on-screen controls float over the bottom of the map on every screen */
+#pad{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);padding:0 calc(env(safe-area-inset-left,0px) + 14px) 0 calc(env(safe-area-inset-right,0px) + 14px);pointer-events:none;z-index:5;max-width:none}
+#pad .dpad button,#pad .abtn,#pad #stick{pointer-events:auto}#pad .hint{display:none}
+#pad .dpad button{opacity:.82}#pad .abtn{opacity:.88}
+#stick{width:118px;height:118px;border-radius:50%;background:rgba(7,44,77,.35);border:3px solid rgba(255,255,255,.55);position:relative;touch-action:none}
+#stick .knob{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;background:rgba(255,255,255,.85);border:3px solid #1070B6;box-shadow:0 2px 0 #072c4d}
+#pad.stick .dpad{display:none}
+#cornerMap{position:fixed;top:calc(var(--mapTop,120px) + 6px);right:calc(env(safe-area-inset-right,0px) + 8px);width:96px;height:auto;z-index:6;image-rendering:pixelated;border:2px solid #fff;border-radius:8px;background:#072c4d;box-shadow:0 2px 0 #072c4d;opacity:.92;cursor:pointer}
+#cornerMap.big{top:50%;right:50%;transform:translate(50%,-50%);width:min(92vw,520px);opacity:1;z-index:60;box-shadow:0 0 0 9999px rgba(5,24,43,.55)}
+.wset{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:6px}
+#battle .wordwin{padding-top:6px;padding-bottom:8px}#battle #bWord{font-size:clamp(30px,9vw,52px);line-height:1.1}
+#battle .wtools{margin-top:4px}#battle .wtools .chip{padding:5px 10px;font-size:13px}
+.repq{display:flex;flex-wrap:wrap;gap:6px}#repText{width:100%;box-sizing:border-box;border-radius:8px;border:0;padding:8px;font:inherit;font-size:14px}
 #lqLoad{position:fixed;inset:0;z-index:9000;background:rgba(5,24,43,.55);display:flex;align-items:center;justify-content:center}
 #lqLoad .lqbox{background:#1070B6;border:3px solid #fff;border-radius:14px;padding:18px 22px;color:#fff;text-align:center;min-width:240px;font-family:Poppins,system-ui,sans-serif}
 #lqLoad .lqmsg{margin-bottom:10px;font-weight:600}
@@ -519,6 +534,7 @@ window.addEventListener('load',function(){setTimeout(function(){window.__lqDone&
       <div id="dialog" class="win" hidden><canvas id="dPort" width="16" height="16" hidden></canvas><div class="dbody"><span id="dName" hidden></span><span id="dtext"></span></div></div>
     </div>
   </main>
+  <canvas id="cornerMap" width="168" height="120" title="Map"></canvas>
   <div id="pad">
     <div class="dpad">
       <span class="c"></span><button data-d="up" aria-label="Up">▲</button><span class="c"></span>
@@ -526,6 +542,7 @@ window.addEventListener('load',function(){setTimeout(function(){window.__lqDone&
       <span class="c"></span><button data-d="down" aria-label="Down">▼</button><span class="c"></span>
     </div>
     <div class="hint">Drag on the map to walk, tap to talk. Tap Lex for his menu.</div>
+    <div id="stick" hidden><div class="knob"></div></div>
     <button class="abtn" id="aBtn" aria-label="Action">A</button>
   </div>
 </div>
@@ -1737,7 +1754,7 @@ const COURSE_OF={zh:['hsk3','hsk2','kouyu'],ja:['jlpt','genki'],ko:['kocore','lt
 // Words picked per language from the game's own lists first, then HSK/JLPT/Korean Learners' Dictionary/Wiktionary.
 const TOPIC={"meta":[{"name":"Greetings & basics","level":"Beginner"},{"name":"Numbers & quantities","level":"Beginner"},{"name":"People & family","level":"Beginner"},{"name":"Food & drink","level":"Beginner"},{"name":"Colors & shapes","level":"Beginner"},{"name":"Time, days & months","level":"Beginner"},{"name":"Body & health","level":"Elementary"},{"name":"Clothes & accessories","level":"Elementary"},{"name":"House & home","level":"Elementary"},{"name":"Animals","level":"Elementary"},{"name":"Weather & nature","level":"Elementary"},{"name":"Places in town","level":"Elementary"},{"name":"Transport & travel","level":"Elementary"},{"name":"Jobs & occupations","level":"Intermediate"},{"name":"School & education","level":"Intermediate"},{"name":"Shopping & money","level":"Intermediate"},{"name":"Hobbies, sports & music","level":"Intermediate"},{"name":"Feelings & personality","level":"Intermediate"},{"name":"Technology & media","level":"Intermediate"},{"name":"Work & business","level":"Upper-intermediate"},{"name":"Society & environment","level":"Upper-intermediate"}],"data":{}};
 const TOPIC_PARTS=[[0,1],[2,3],[4,5],[6,7],[8,9],[10,11],[12,13],[14,15],[16,17],[18,19,20]];
-const TOPIC_CNT={"zh":[101,129,117,146,102,115,122,106,121,119,114,114,108,108,115,101,119,99,103,98,108],"ja":[103,129,112,141,107,111,120,108,119,112,108,107,104,108,115,100,119,99,98,101,111],"ko":[85,112,102,134,99,104,107,92,107,108,104,103,92,94,105,76,107,87,63,87,99],"vi":[103,128,106,142,104,109,123,100,119,118,106,112,106,100,110,93,121,103,90,105,106],"es":[103,128,110,144,101,104,120,101,120,122,116,115,109,112,114,103,123,105,105,105,112],"de":[104,128,106,140,103,109,125,96,118,119,114,110,105,109,110,100,110,101,105,108,111],"fr":[100,120,107,139,102,109,120,100,119,121,114,110,106,111,110,97,121,108,103,106,112],"it":[107,125,107,137,100,110,122,93,118,120,113,104,104,112,109,101,120,109,102,103,109],"he":[96,103,86,125,92,78,106,71,94,106,95,96,77,70,92,73,82,76,77,71,86],"ru":[100,127,103,138,106,103,119,98,116,121,113,106,102,101,109,97,125,99,96,98,105],"hi":[87,109,88,89,85,87,94,63,75,75,89,82,75,70,80,72,73,77,61,75,89],"th":[82,85,74,109,90,68,96,67,86,98,90,82,72,71,83,69,85,81,62,76,80]},TOPIC_UNIQ={"zh":2076,"ja":2056,"ko":1779,"vi":2004,"es":2091,"de":2067,"fr":2063,"it":2045,"he":1572,"ru":2002,"hi":1444,"th":1428};
+const TOPIC_CNT={"zh":[101,129,117,146,102,115,122,106,121,119,114,114,108,108,115,101,119,99,103,98,108],"ja":[103,129,112,141,107,111,120,108,119,112,108,107,104,108,115,100,119,99,98,101,111],"ko":[85,112,102,134,99,104,107,92,107,108,104,103,92,94,105,76,107,87,63,87,99],"vi":[103,128,106,142,104,109,123,100,119,118,106,112,106,100,110,93,121,103,90,105,106],"es":[103,128,110,144,101,104,120,101,120,122,116,115,109,112,114,103,123,105,105,105,112],"de":[104,128,106,140,103,109,125,96,118,119,114,110,105,109,110,100,110,101,105,108,111],"fr":[100,120,107,139,102,109,120,100,119,121,114,110,106,111,110,97,121,108,103,106,112],"it":[107,125,107,137,100,110,122,93,118,120,113,104,104,112,109,101,120,109,102,103,109],"he":[96,103,86,125,92,78,106,71,94,106,95,96,77,70,92,73,82,76,77,71,86],"ru":[100,127,103,138,106,103,119,98,116,121,113,106,102,101,109,97,125,99,96,98,105],"hi":[87,108,88,89,85,87,93,63,75,75,88,82,75,68,80,71,73,77,61,75,87],"th":[82,84,74,108,90,68,96,66,86,97,90,82,72,71,82,68,85,81,62,76,80]},TOPIC_UNIQ={"zh":2076,"ja":2056,"ko":1779,"vi":2004,"es":2091,"de":2067,"fr":2063,"it":2045,"he":1572,"ru":2002,"hi":1438,"th":1422};
 Object.keys(TOPIC_CNT).forEach(lg=>{
   const d=null,key=lg+'_topics';
   COURSES[key]={lang:lg,name:'Topics',desc:`21 everyday topics, from greetings to society: ${TOPIC_UNIQ[lg].toLocaleString()} words`,topics:true,tato:!!TATO[lg],
@@ -1824,7 +1841,8 @@ function bankList(code){if(bankCache[code])return bankCache[code];
 function knownWords(code){const K=new Set();{const c=courseFor(code),st=levelStart(code,c);if(st)for(const x of wordListFor(code,c).slice(0,st)){K.add(nkey(code,x.t));if(x.k)K.add(x.k)}}for(const [t,e] of Object.entries(colFor(code).w)){if(e[0]>0||e[7]>0||e[9]===1){K.add(nkey(code,t));if(e[5])K.add(e[5])}}return K}
 function eligibleSentences(){
   const B0=bankList(lang),K=knownWords(lang),col=colFor(lang).s,out=[],near=[];
-  for(const s of B0){let miss=0;for(const t of s.toks)if(!K.has(t)){miss++;if(miss>1)break}
+  const st0=Math.floor(B0.length*LEVELS[levelOf(lang)-1].f);
+  for(const s of B0.slice(st0)){let miss=0;for(const t of s.toks)if(!K.has(t)){miss++;if(miss>1)break}
     if(miss===0)out.push(s);else if(miss===1&&!col[s.t])near.push(s)}
   const freshN=out.filter(s=>!col[s.t]).length;
   return freshN>=3?out:out.concat(near.slice(0,8)); // if few sentences are unlocked yet, allow ones with one new word
@@ -1839,7 +1857,12 @@ function wordListFor(code,course){const k='wl:'+code+':'+course;if(poolCache[k])
 const bandStart=(N,lv)=>lv>7?N:Math.floor(N*LEVELS[lv-1].f);
 function levelStart(code,course){return bandStart(wordListFor(code,course).length,levelOf(code))}
 function courseFor(code){return (saves[code]&&saves[code].course&&COURSES[saves[code].course]&&COURSES[saves[code].course].lang===code)?saves[code].course:COURSE_OF[code][0]}
+function mergedWords(){const cs=selCourses(),k='mw:'+lang+':'+cs.join('+');if(poolCache[k])return poolCache[k];
+  const items=[];cs.forEach(c=>{const L=wordListFor(lang,c);L.forEach((x,i)=>items.push([i/L.length,x]))});items.sort((a,b)=>a[0]-b[0]);
+  const seen=new Set(),out=[];for(const [,x] of items){const key=nkey(lang,x.t);if(seen.has(key))continue;seen.add(key);out.push(x)}
+  poolCache['cl:'+lang+':'+S.course+':w:i']=new Map(out.map((x,i)=>[x.t,i]));return poolCache[k]=out}
 function courseList(){
+  if(srsKind()==='w'&&selCourses().length>1)return mergedWords();
   if(srsKind()==='s'&&SBANK[lang]){const k='bank:'+lang;if(!poolCache[k]){poolCache[k]=bankList(lang);poolCache['cl:'+lang+':'+S.course+':s:i']=new Map(poolCache[k].map((x,i)=>[x.t,i]))}
     poolCache['cl:'+lang+':'+S.course+':s:i']=poolCache['cl:'+lang+':'+S.course+':s:i']||new Map(poolCache[k].map((x,i)=>[x.t,i]));return poolCache[k]}const k='cl:'+lang+':'+S.course+':'+srsKind();if(poolCache[k])return poolCache[k];
   const L=[],seen=new Set();for(let a=1;a<=10;a++)for(const x of poolFor(a))if(!seen.has(x.t)){seen.add(x.t);L.push(x)}
@@ -1850,7 +1873,7 @@ function srsPick(pool){
   const all=Object.entries(col).filter(([t,e])=>!recent.includes(t)&&!hidden(e)&&(e[0]>0||e[7]>0));
   const due=all.filter(([,e])=>srsDue(e)<=now).sort((a,b)=>srsDue(a[1])-srsDue(b[1]));
   const learning=Object.values(col).filter(e=>!hidden(e)&&(e[0]>0)&&srsBox(e)<=2).length;
-  const st=srsKind()==='w'?levelStart(lang,S.course):0;
+  const st=srsKind()==='w'?bandStart(pool.length,levelOf(lang)):0;
   const fresh=(st?pool.slice(st):pool).filter(x=>!col[x.t]&&!recent.includes(x.t));
   const asEntry=([t,e])=>inPool.get(t)||srsEntry(t,e);
   if(due.length&&(Math.random()<.75||!fresh.length||learning>=SRS_NEW_CAP)){B.srsTag='review';return asEntry(due[0])}
@@ -1870,7 +1893,9 @@ function track(w,what){
   if(what==='seen')e[0]++;else if(what==='right')e[1]++;else e[2]++;
 }
 prefs.practice=prefs.practice||{};
-const practice=()=>prefs.practice[lang]||'words';
+const practice=()=>(typeof B!=='undefined'&&B&&B.kind)?(B.kind==='s'?'sentences':'words'):(prefs.practice[lang]||'words');
+const mixBoth=()=>{const m=(prefs.prMix||{})[lang];return !!(m&&m.includes('words')&&m.includes('sentences')&&SBANK[lang])};
+function selCourses(){const c=((prefs.courses||{})[lang]||[]).filter(x=>COURSES[x]&&COURSES[x].lang===lang);return c.length?c:[S.course]}
 const poolFor=a=>practice()==='sentences'?sentPool(a):areaPool(a);
 function newSave(){return{lv:1,xp:0,maxHp:20,hp:20,area:1,aw:{},bd:{},miss:{},asked:0,right:0,x:4,y:6,intro:false,course:null,seenArea:{1:true}}}
 function migrate(s,code){
@@ -2306,6 +2331,9 @@ const ROLE_LINES={
  default:["Living the language is the best way to learn it!","Every word you collect brings you closer to fluency.","Keep going, Lex. The whole LTL team is cheering for you!"]};
 const OBST_NOUN={tree:'tree',bamboo:'bamboo',water:'rock',cactus:'cactus',pine:'pine tree',lava:'rock',crystal:'crystals',pillar:'pillar',rock:'rock'};
 function teamFound(){saves._team=saves._team||{};return saves._team}
+const spotKey=t=>t.m.id+'@'+AREA+':'+t.x+','+t.y;
+function spotFound(t){return !!((saves._spots||{})[spotKey(t)])}
+function markSpot(t){saves._spots=saves._spots||{};saves._spots[spotKey(t)]=1;persistPrefs()}
 const teamCount=()=>Object.keys(teamFound()).length;
 function markFound(m){if(!m)return false;const f=teamFound();if(f[m.id])return false;f[m.id]=Date.now();try{localStorage.setItem(SAVE_KEY,JSON.stringify(saves))}catch(e){}if(S)updateHud();return true}
 // Deterministic placement: 2 by the exit gate, 2 hiding behind obstacles, the rest scattered around the area
@@ -2430,7 +2458,7 @@ const SHOPITEMS=[
  ...Object.entries(PETS).map(([k,v])=>({id:'pet:'+k,cat:'Pets',n:v.n,c:v.c*3})),
  ...Object.entries(DECOR).map(([k,v])=>({id:'decor:'+k,cat:'Decorations',n:v.n,c:v.c<=25&&!['koipond','torii','stonelantern','picnic','mailbox','telescope','pumpkin','globe'].includes(k)?v.c*3:v.c}))];
 function teamTalk(t){
-  const m=t.m,first=markFound(m),greet=GREET[m.school]||'Hi!';
+  const m=t.m,first=markFound(m),greet=GREET[m.school]||'Hi!';if(t.hidden)markSpot(t);
   const lines=[];
   if(t.cameo&&!first){
     lines.push(`${greet} Great seeing you again, Lex! I'm visiting ${THEMES[AREA-1].name} today.`,m.rec2);
@@ -2668,21 +2696,37 @@ function onStep(){
   if(tileAt(P.tx,P.ty)===','&&ADMIN.enc!=='off'&&(ADMIN.enc==='always'?sinceBattle>=1:sinceBattle>=4&&Math.random()<.14))beginBattle(false);
 }
 function fitView(){
-  const st=document.getElementById('stage'),side=matchMedia('(orientation:landscape) and (max-height:560px)').matches&&!prefs.hidePad;
+  const st=document.getElementById('stage'),side=matchMedia('(orientation:landscape) and (max-height:560px)').matches&&padMode()!=='off';
   const W=st.clientWidth-8-(side?380:0),H=st.clientHeight-8;if(W<50||H<50)return;
   let vw,vh;
-  if(H>W*.95){vw=W<420?11:12;const sc=W/(vw*T);vh=Math.max(9,Math.min(16,Math.floor(H/(sc*T))))}
+  if(H>W*.95){vw=W<420?11:12;const sc=W/(vw*T);vh=Math.max(9,Math.min(24,Math.floor(H/(sc*T))))}
   else{vh=11;const sc=H/(vh*T);vw=Math.max(13,Math.min(20,Math.floor(W/(sc*T))))}
   if(vw!==VW||vh!==VH){VW=vw;VH=vh;cvs.width=VW*T;cvs.height=VH*T;ctx.imageSmoothingEnabled=false}
   const k=Math.min(W/(VW*T),H/(VH*T)),sc=document.getElementById('screen');
   sc.style.width=Math.floor(VW*T*k)+'px';sc.style.height=Math.floor(VH*T*k)+'px';
 }
 addEventListener('resize',fitView);
-function applyPad(){document.getElementById('pad').hidden=!!prefs.hidePad;document.getElementById('padBtn').classList.toggle('off',!!prefs.hidePad);fitView()}
-document.getElementById('padBtn').onclick=()=>{prefs.hidePad=!prefs.hidePad;persistPrefs();applyPad()};
+const padMode=()=>prefs.padMode||(prefs.hidePad?'off':'pad');
+function applyPad(){const m=padMode(),pad=document.getElementById('pad'),b=document.getElementById('padBtn');
+  pad.hidden=m==='off';pad.classList.toggle('stick',m==='stick');document.getElementById('stick').hidden=m!=='stick';
+  b.textContent={pad:'Pad',stick:'Stick',off:'Off'}[m];b.classList.toggle('off',m==='off');prefs.hidePad=m==='off';fitView()}
+document.getElementById('cornerMap').addEventListener('click',e=>{e.stopPropagation();e.currentTarget.classList.toggle('big');cmLast=0});
+document.getElementById('padBtn').onclick=()=>{prefs.padMode={pad:'stick',stick:'off',off:'pad'}[padMode()];persistPrefs();applyPad();toast({pad:'Controls: direction pad',stick:'Controls: joystick',off:'Controls hidden. Drag on the map to walk.'}[prefs.padMode])};
+(function(){const st=document.getElementById('stick'),kn=st.querySelector('.knob');let id=null;
+  const move=e=>{const r=st.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const L=Math.hypot(dx,dy),max=r.width/2-14;
+    if(L>max){dx*=max/L;dy*=max/L}kn.style.transform=`translate(${dx}px,${dy}px)`;
+    padDir=L<14?null:Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up')};
+  st.addEventListener('pointerdown',e=>{e.preventDefault();id=e.pointerId;try{st.setPointerCapture(id)}catch(_){}move(e)});
+  st.addEventListener('pointermove',e=>{if(e.pointerId===id)move(e)});
+  const end=e=>{if(e.pointerId!==id)return;id=null;padDir=null;kn.style.transform=''};
+  st.addEventListener('pointerup',end);st.addEventListener('pointercancel',end)})();
 document.getElementById('status').onclick=()=>openLexMenu();
 setTimeout(applyPad,0);
-function render(t){
+let cmLast=0;
+function drawCorner(t){const cv=document.getElementById('cornerMap');if(!cv)return;const show=state==='map'&&!!S;cv.hidden=!show;if(!show)return;
+  if(t-cmLast<.25)return;cmLast=t;const scr=document.getElementById('screen');if(scr){const r=scr.getBoundingClientRect();document.documentElement.style.setProperty('--mapTop',r.top+'px')}
+  try{drawMiniMap(cv,AREA,Math.floor(t*3)%2)}catch(e){}}
+function render(t){drawCorner(t);
   const camX=Math.round(Math.max(0,Math.min(MW*T-VW*T,P.px+8-VW*T/2)));
   const camY=Math.round(Math.max(0,Math.min(MH*T-VH*T,P.py+8-VH*T/2)));
   CAM.x=camX;CAM.y=camY;
@@ -2701,7 +2745,7 @@ function render(t){
     const ox=tm.x*T-camX,oy=tm.y*T-camY,ph=hashStr(tm.m.id)%7,found=!!teamFound()[tm.m.id];
     if(ox<-16||oy<-24||ox>VW*T||oy>VH*T)continue;
     if(tm.hidden){
-      if(found){const rows=guideRows(tm.m).slice(0,8);drawRows(ctx,rows,guidePal(tm.m),ox+(tm.x%2?3:-3),oy-4)}
+      if(found&&spotFound(tm)){const rows=guideRows(tm.m).slice(0,8);drawRows(ctx,rows,guidePal(tm.m),ox+(tm.x%2?3:-3),oy-4)}
       else if(((t*1000+ph*431)%2600)<450){const k=Math.floor(t*10)%2;R(0,ox+3+k,oy+2,1,1,'#fff');R(0,ox+11-k,oy+4,1,1,'#fff');R(0,ox+7,oy+1-k,1,1,'#FDD440')}
       if(ADMIN.showTeam&&!found){ctx.strokeStyle='#ff4fd8';ctx.strokeRect(ox+.5,oy+.5,15,15)}
       continue;}
@@ -2771,8 +2815,8 @@ function openBattle(boss){
   const pHp=Math.min(.8,.2+a*.07),p3=a>=4?Math.min(.5,.05*a):0;
   const slots=[];
   for(let i=0;i<4;i++){
-    if(boss&&i===2){const bh=6+a*2;slots.push({alive:true,king:true,col:TH.boss,hp:bh,max:bh})}
-    else if(i<count){const h=areaHp(a,boss)+(Math.random()<pHp?1:0);slots.push({alive:true,col:cols[i],hp:h,max:h})}
+    if(boss&&i===2){const bh=Math.max(6+a*2,6*lexAtk());slots.push({alive:true,king:true,col:TH.boss,hp:bh,max:bh})}
+    else if(i<count){const at=lexAtk(),h=Math.max(areaHp(a,boss)+(Math.random()<pHp?1:0),2*at+(Math.random()<.4?at:0)+(boss?at:0));slots.push({alive:true,col:cols[i],hp:h,max:h})}
     else slots.push({alive:false,col:GHOST});
     const s=slots[i];s.max=s.max||s.hp||0;
   }
@@ -2857,6 +2901,7 @@ function distractors(w,pool){
 function nextPrompt(same){
   if(!B||B.over)return;
   if(!same){
+    if(mixBoth()){B.pc=(B.pc||0)+1;B.kind=B.pc%3===0&&eligibleSentences().length?'s':'w'}else B.kind=null;
     const pool=courseList();
     const w=srsPick(srsKind()==='s'&&SBANK[lang]?eligibleSentences():pool);B.w=w;B.pool=pool;B.missThis=false;recent.push(w.t);if(recent.length>4)recent.shift();
     B.opts=distractors(w,pool);showWord(w);track(w,'seen');autoSpeak();powUI();
@@ -2938,7 +2983,7 @@ function choose(k){
     if(!B.missed.includes(w))B.missed.push(w);
     s.el.classList.add('wrong');SFX.wrong();
     const alive=B.slots.filter(x=>x.alive),atk=alive.find(x=>x.king&&Math.random()<.6)||alive[rnd(alive.length)];
-    const dmg=ADMIN.god?0:Math.max(1,Math.round(((atk.king?6:3)+rnd(3)+AREA*1.2)*(B.boss?1.3:1))-(perk(16)?1:0));
+    const dmg=ADMIN.god?0:Math.max(1,Math.round(Math.max((atk.king?6:3)+rnd(3)+AREA*1.2,S.maxHp*(atk.king?.11:.07))*(B.boss?1.3:1))-(perk(16)?1:0));
     const miss=mode()==='recall'?`Not quite, <span class="w" lang="${LANGS[lang].html}">${esc(disp(s.opt.t))}</span> means “${esc(s.opt.m)}”.`:`Not quite, ${wHtml} isn't “${esc(s.opt.m)}”.`;
     setMsg(miss);
     setTimeout(()=>{replay(atk.el,'attack');
@@ -3029,6 +3074,11 @@ function showExample(){
   if(ex&&!rec&&prefs.autoplay)setTimeout(()=>speakText(ex.t,lang),200);
 }
 document.getElementById('exBtn').onclick=showExample;
+// battle settings live behind one button, so the battle itself gets more room
+(function(){const tools=document.querySelector('.wtools');if(!tools)return;const gear=document.createElement('button');gear.className='chip';gear.id='setBtn';gear.textContent='⚙ Settings';
+  const pnl=document.createElement('div');pnl.className='wset';pnl.hidden=true;['autoBtn','readBtn','scriptBtn'].forEach(id=>{const b=document.getElementById(id);if(b)pnl.appendChild(b)});
+  {const rb=document.createElement('button');rb.className='chip';rb.id='repBtn';rb.textContent='🚩 Report a problem';rb.onclick=()=>openReport();pnl.appendChild(rb)}
+  tools.appendChild(gear);tools.after(pnl);gear.onclick=()=>{pnl.hidden=!pnl.hidden;gear.classList.toggle('on',!pnl.hidden)}})();
 /* Power Recall: fill the meter with 3 right answers, then SAY the answer out loud.
    Recognize mode: say the English meaning. Recall mode: say the word in the language you're learning.
    If speech recognition hears it well enough, Lex roars and hits two enemies at once. */
@@ -3180,13 +3230,13 @@ function srcPicker(){const d=document.createElement('div');d.className='srcrow';
   d.innerHTML=`<label for="srcSel">Language<span> · 语言 · 言語 · 언어 · Ngôn ngữ</span></label><select id="srcSel">${Object.entries(SRCS).map(([k,v])=>`<option value="${k}"${SRC()===k?' selected':''}>${v}</option>`).join('')}</select>`;
   d.querySelector('select').onchange=e=>{setSource(e.target.value);buildTitle();toast({en:'The game is now in English.',zh:'游戏已切换为中文。',ja:'ゲームを日本語に切り替えました。',ko:'게임이 한국어로 바뀌었어요.',vi:'Trò chơi đã chuyển sang tiếng Việt.'}[e.target.value])};return d}
 function buildTitle(){
-  setTimeout(()=>{try{if(state==='title'&&window.COL_FROM!=='lex')playTrack('area1',AREA_MUSIC[0])}catch(e){}},0);
+  setTimeout(()=>{try{if(state==='title'&&window.COL_FROM!=='lex')playTrack('title',Object.assign({},AREA_MUSIC[0],{name:'Title',bpm:92,scale:'lydian',lead:'bell',bass:'drone',drums:'none',arp:true,pad:true,rest:.38,wet:.4,seed:991}))}catch(e){}},0);
   langsBox.className='langs';langsBox.innerHTML='';
   document.querySelector('.tin .sub').hidden=false;
   langsBox.appendChild(srcPicker());langsBox.appendChild(slotBar());
   Object.entries(LANGS).filter(([c,L])=>(!L.locked||saves._unlock)&&c!==SRC()).forEach(([code,L])=>{
     const b=document.createElement('button');b.className='win lang';
-    b.innerHTML=`<span class="n" lang="${L.html}">${L.native}</span><span class="e">${L.en}: ${COURSE_OF[code].map(c=>COURSES[c].name).join(', ')}</span><span class="s">${saveLine(saves[code])}</span>`;
+    b.innerHTML=`<span class="n" lang="${L.html}"><span lang="${L.html}">${L.native}</span></span><span class="e">${L.en}: ${COURSE_OF[code].map(c=>COURSES[c].name).join(', ')}</span><span class="s">${saveLine(saves[code])}</span>`;
     b.onclick=()=>showSetup(code);langsBox.appendChild(b);
   });
   const cb=document.createElement('button');cb.className='bigbtn colbtn';cb.textContent='My collection';cb.onclick=()=>showCollection(lang||'zh','w');langsBox.appendChild(cb);
@@ -3348,13 +3398,15 @@ function showCollection(code,kind,sort,view){
 function showSetup(code){
   const L=LANGS[code];let course=(saves[code]&&saves[code].course&&COURSES[saves[code].course]&&COURSES[saves[code].course].lang===code)?saves[code].course:COURSE_OF[code][0];
   let md=prefs.mode[code]||'recognize',pr=prefs.practice[code]||'words';
+  prefs.prMix=prefs.prMix||{};prefs.courses=prefs.courses||{};
+  let prs=new Set(prefs.prMix[code]||[pr]),crs=new Set((prefs.courses[code]||[course]).filter(c=>COURSES[c]&&COURSES[c].lang===code));if(!crs.size)crs.add(course);
   document.querySelector('.tin .sub').hidden=true;
   langsBox.className='setgroup';
   const draw=()=>{
     langsBox.innerHTML=`<button class="back" id="backBtn">Back to languages</button>
-    <h3>Practice</h3><div class="sets"><button class="win setbtn${pr==='words'?' cur':''}" data-pr="words"><span class="n">Words</span><span class="e">Vocabulary from ${esc(COURSES[course].name)}</span></button><button class="win setbtn${pr==='sentences'?' cur':''}" data-pr="sentences"><span class="n">Sentences</span><span class="e">${SBANK[code]?`${SBANK[code].length.toLocaleString()} sentences that use the words you've learned`:COURSES[course].tato?'1,200 real sentences from Tatoeba, easiest first':COURSES[course].cmp?`100 ${esc(COURSES[course].name)} sentences, one unit per area`:'200 everyday sentences, harder in each area'}</span></button></div>
+    <h3>Practice</h3><p class="note mixnote">Pick one or both. Tap again to turn one off.</p><div class="sets"><button class="win setbtn${prs.has('words')?' cur':''}" data-pr="words"><span class="n">Words</span><span class="e">Vocabulary from ${esc(COURSES[course].name)}</span></button><button class="win setbtn${prs.has('sentences')?' cur':''}" data-pr="sentences"><span class="n">Sentences</span><span class="e">${SBANK[code]?`${SBANK[code].length.toLocaleString()} sentences that use the words you've learned`:COURSES[course].tato?'1,200 real sentences from Tatoeba, easiest first':COURSES[course].cmp?`100 ${esc(COURSES[course].name)} sentences, one unit per area`:'200 everyday sentences, harder in each area'}</span></button></div>
     <h3>Direction</h3><div class="sets">${Object.entries(MODES).map(([id,M])=>`<button class="win setbtn${id===md?' cur':''}" data-mode="${id}"><span class="n">${M.name}</span><span class="e">${M.hint(code)}</span><span class="e">${id==='recall'?`See the English, find the ${pr==='sentences'?'sentence':'word'}`:`See the ${pr==='sentences'?'sentence':'word'}, find the English`}</span></button>`).join('')}</div>
-    ${COURSE_OF[code].length>1?`<h3>Course</h3><div class="sets">${COURSE_OF[code].map(id=>`<button class="win setbtn${id===course?' cur':''}" data-course="${id}"><span class="n">${esc(COURSES[id].name)}</span><span class="e">${esc(COURSES[id].desc)}</span></button>`).join('')}</div>`:''}
+    ${COURSE_OF[code].length>1?`<h3>Course</h3><p class="note mixnote">Pick one or more courses. Words that appear in several courses only come up once.</p><div class="sets">${COURSE_OF[code].map(id=>`<button class="win setbtn${crs.has(id)?' cur':''}" data-course="${id}"><span class="n">${esc(COURSES[id].name)}</span><span class="e">${esc(COURSES[id].desc)}</span></button>`).join('')}</div>`:''}
     <h3>Your level</h3><div class="lvls">${LEVELS.map((l,i)=>`<button class="lvl${levelOf(code)===i+1?' cur':''}" data-lv="${i+1}"><b>${l.c}</b><span>${l.n}</span></button>`).join('')}</div>
     <div class="lvlinfo">${(()=>{const N=wordListFor(code,course).length,st=bandStart(N,levelOf(code));return st?`Starts at word ${(st+1).toLocaleString()} of ${N.toLocaleString()} in ${esc(COURSES[course].name)}. The first ${st.toLocaleString()} count as known, and sentences can use them.`:`Starts from the very first word of ${esc(COURSES[course].name)}.`})()}</div>
     <button class="bigbtn alt" id="placeBtn">Not sure? Take the placement test (about 2 minutes)</button>
@@ -3364,13 +3416,13 @@ function showSetup(code){
     <button class="linkbtn" id="colBtn2">View my ${L.en} collection</button>`;
     document.getElementById('backBtn').onclick=buildTitle;
     langsBox.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{md=b.dataset.mode;draw()});
-    langsBox.querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>{pr=b.dataset.pr;draw()});
+    langsBox.querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>{const v=b.dataset.pr;if(prs.has(v)){if(prs.size>1)prs.delete(v)}else prs.add(v);pr=prs.has('words')?'words':'sentences';draw()});
     const ts=document.getElementById('tradSw');if(ts)ts.onclick=()=>{prefs.trad=!prefs.trad;persistPrefs();draw()};
     document.getElementById('colBtn2').onclick=()=>showCollection(code,pr==='sentences'?'s':'w');
-    langsBox.querySelectorAll('[data-course]').forEach(b=>b.onclick=()=>{course=b.dataset.course;draw()});
+    langsBox.querySelectorAll('[data-course]').forEach(b=>b.onclick=()=>{const v=b.dataset.course;if(crs.has(v)){if(crs.size>1)crs.delete(v)}else crs.add(v);course=[...COURSE_OF[code]].find(c=>crs.has(c));draw()});
     langsBox.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>{prefs.level[code]=+b.dataset.lv;persistPrefs();draw()});
     document.getElementById('placeBtn').onclick=()=>placementTest(code,course,()=>{draw();document.getElementById('title').scrollTop=0});
-    document.getElementById('goBtn').onclick=()=>{prefs.mode[code]=md;prefs.practice[code]=pr;startGame(code,course)};
+    document.getElementById('goBtn').onclick=()=>{prefs.mode[code]=md;prefs.practice[code]=prs.has('words')?'words':'sentences';prefs.prMix[code]=[...prs];prefs.courses[code]=[...COURSE_OF[code]].filter(c=>crs.has(c));persistPrefs();startGame(code,prefs.courses[code][0])};
     const nb=document.getElementById('newBtn');
     if(nb)nb.onclick=()=>newGameElsewhere(code,course,md,pr);
   };
@@ -3406,7 +3458,35 @@ function placementTest(code,course,done){
     document.getElementById('pIdk').onclick=()=>answer(-1);document.getElementById('pQuit').onclick=done};
   document.getElementById('title').scrollTop=0;pickRound();ask();
 }
+/* ===== Report a problem (wrong word, bad example, bug) and anonymous daily player count ===== */
+function pingDaily(){try{if(!CLOUD_URL)return;const day=new Date().toISOString().slice(0,10);if(localStorage.getItem('ltl-lex-ping')===day)return;
+  let pid=localStorage.getItem('ltl-lex-pid');if(!pid){pid=Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b%32]).join('');localStorage.setItem('ltl-lex-pid',pid)}
+  fetch(CLOUD_URL+'/ping',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pid,lang})}).then(r=>{if(r.ok)localStorage.setItem('ltl-lex-ping',day)}).catch(()=>{})}catch(e){}}
+function openReport(){
+  const w=B&&B.w,ex=w?exampleFor(lang,w):null,pop=document.getElementById('exPop');
+  const ctx={kind:w?(srsKind()==='s'?'sentence':'word'):'general',lang,course:S&&S.course,area:AREA,word:w&&w.t,meaning:w&&(w.en||w.m),reading:w&&w.r,example:ex&&ex.t,ui:SRC(),version:'web'};
+  pop.innerHTML=`<div class="exwin win"><div class="exhead"><b>Report a problem</b><button class="admbtn" id="repClose">Close</button></div>
+    ${w?`<div class="exword"><span lang="${LANGS[lang].html}">${esc(disp(w.t))}</span> <small>${esc(w.m)}</small></div>`:''}
+    <div class="repq">${w?['Wrong meaning','Wrong pronunciation or audio','Example sentence doesn\'t match','Strange or rude word'].map(t=>`<button class="ca" data-q="${t}">${t}</button>`).join(''):''}<button class="ca" data-q="Game bug">Game bug</button></div>
+    <textarea id="repText" rows="3" maxlength="600" placeholder="What's wrong? (optional for word problems)"></textarea>
+    <button class="bigbtn" id="repSend">Send report</button><p class="note" id="repNote">${w?'The word, its meaning and your language are included automatically.':'Tell us what happened and where.'}</p></div>`;
+  pop.hidden=false;const txt=document.getElementById('repText');
+  pop.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{txt.value=(txt.value?txt.value+'. ':'')+b.dataset.q;b.classList.add('know')});
+  document.getElementById('repClose').onclick=()=>pop.hidden=true;
+  document.getElementById('repSend').onclick=async()=>{const body={...ctx,text:txt.value.trim()};if(!body.text&&!w){document.getElementById('repNote').textContent='Please describe the problem.';return}
+    if(CLOUD_URL){try{const r=await fetch(CLOUD_URL+'/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw 0;pop.hidden=true;toast('Thank you! Your report was sent to the LTL team.');return}catch(e){}}
+    const mail='mailto:?subject='+encodeURIComponent("Lex's Word Quest report")+'&body='+encodeURIComponent(Object.entries(body).filter(([k,v])=>v).map(([k,v])=>k+': '+v).join('\n'));
+    location.href=mail;pop.hidden=true}}
+function useLangStore(code){
+  saves._byLang=saves._byLang||{};const cur=saves._storeLang;if(cur===code)return;
+  const fill=(o,src)=>{for(const k of Object.keys(o))delete o[k];Object.assign(o,JSON.parse(JSON.stringify(src||{})))};
+  if(cur)saves._byLang[cur]={shop:JSON.parse(JSON.stringify(SHOP)),gems:{...GEMS},team:{...(saves._team||{})},spots:{...(saves._spots||{})},fl:saves._friendLocal||null,fc:saves._friendCloud||null};
+  const d=saves._byLang[code];
+  if(d){fill(SHOP,d.shop);fill(GEMS,d.gems);saves._team=d.team||{};saves._spots=d.spots||{};saves._friendLocal=d.fl||undefined;saves._friendCloud=d.fc||undefined}
+  else if(cur||saves._storeMigrated){fill(SHOP,{owned:{},eq:{},spent:0,earned:0,picked:0,decor:{}});fill(GEMS,{});saves._team={};saves._spots={};delete saves._friendLocal;delete saves._friendCloud}
+  saves._storeMigrated=1;saves._storeLang=code;try{localStorage.setItem(SAVE_KEY,JSON.stringify(saves))}catch(e){}}
 function startGame(code,course){
+  useLangStore(code);setTimeout(pingDaily,1500);
   Object.keys(poolCache).forEach(k=>delete poolCache[k]);lang=code;S=migrate(Object.assign(newSave(),saves[code]||{}),code);S.course=course;
   document.getElementById('title').hidden=true;state='map';setTimeout(fitView,0);
   Object.keys(S.met||{}).forEach(a=>markFound(guideRef(a)));
@@ -3548,7 +3628,8 @@ function openLexMenu(again){
    <div class="travelrow" id="travelRow"></div>
    ${S.lv>=50?`<button class="bigbtn friendbtn" id="friendBtn">★ Leave your mark: become a Friend of LTL</button>`:`<p class="note" style="margin:8px 0 0">At level 50 you can design your own character and leave it in the world for other players to meet.</p>`}
    <button class="bigbtn" id="shopBtn">Gem shop and decorations (${gemBalance()} gems)</button>
-   <button class="bigbtn alt" id="lexCol">Open my collection</button>`;
+   <button class="bigbtn alt" id="lexCol">Open my collection</button>
+   <button class="linkbtn" id="lexRep">🚩 Report a problem</button>`;
   let mapA=AREA,blink=true;
   const drawTravel=()=>{const tr=document.getElementById('travelRow');if(!tr)return;
     if(mapA===AREA)tr.innerHTML=`<span>You're in Area ${AREA}. Pick a visited area above to fast travel there.</span>`;
@@ -3562,6 +3643,7 @@ function openLexMenu(again){
   body.querySelectorAll('.lexgear canvas').forEach(c=>{const k=+c.dataset.n,x=c.getContext('2d');
     if(k<=n)drawRows(x,gearRows(LEX,false,k),gearPal(k),0,0);else drawRows(x,gearRows(LEX,false,k),new Proxy({},{get:(o,q)=>'#0a2a47'}),0,0)});
   document.getElementById('shopBtn').onclick=()=>openShop();
+  {const rb=document.getElementById('lexRep');if(rb)rb.onclick=()=>{closeLexMenu();openReport()}}
   {const fb=document.getElementById('friendBtn');if(fb)fb.onclick=()=>openFriendMaker()}
   document.getElementById('lexCol').onclick=()=>{closeLexMenu();persist();window.COL_FROM='lex';state='title';buildTitle();document.getElementById('title').hidden=false;showCollection(lang,'w')};
   document.getElementById('lexMenu').hidden=false;
@@ -3763,7 +3845,14 @@ function stopMusic(){clearInterval(AU.timer);AU.timer=null;AU.track=null;AU.trac
 const musicArea=a=>playTrack('area'+a,AREA_MUSIC[a-1]);
 const musicBattle=boss=>playTrack(boss?'boss':'battle',boss?BOSS_MUSIC:BATTLE_MUSIC);
 // unlock audio on first interaction (browsers block sound until then)
-['pointerdown','keydown'].forEach(ev=>addEventListener(ev,()=>{if(prefs.sound==='off'&&!AU.ctx)return;if(auInit()){if(AU.ctx.state==='suspended')AU.ctx.resume().then(()=>{if(AU.want)playTrack(AU.want.id,AU.want.cfg)});else if(AU.want&&!AU.track)playTrack(AU.want.id,AU.want.cfg)}},true));
+/* Unlocking sound: phones only allow audio after a real tap. Try on every kind of tap/key, play a silent blip (needed on iOS),
+   and start whatever music was waiting as soon as the audio system is actually running. */
+function auUnlock(){if(prefs.sound==='off'&&!AU.ctx)return;if(!auInit())return;const c=AU.ctx;
+  if(!AU.blip){try{const b=c.createBuffer(1,1,22050),src=c.createBufferSource();src.buffer=b;src.connect(c.destination);src.start(0);AU.blip=1}catch(e){}}
+  if(!AU.watch){AU.watch=1;c.addEventListener('statechange',()=>{if(c.state==='running'&&AU.want&&!AU.track)playTrack(AU.want.id,AU.want.cfg)})}
+  if(c.state!=='running')c.resume().then(()=>{if(AU.want&&!AU.track)playTrack(AU.want.id,AU.want.cfg)}).catch(()=>{});
+  else if(AU.want&&!AU.track)playTrack(AU.want.id,AU.want.cfg)}
+['pointerdown','pointerup','touchstart','touchend','click','keydown'].forEach(ev=>addEventListener(ev,auUnlock,true));
 document.addEventListener('visibilitychange',()=>{if(!AU.ctx)return;if(document.hidden)AU.ctx.suspend();else AU.ctx.resume()});
 // --- sound effects ---
 const SFX={
@@ -3828,7 +3917,7 @@ try{const pd=JSON.parse(localStorage.getItem('ltl-lex-pending')||'null');if(pd){
 ENEMIES.forEach((e,i)=>{const v=e.variants[0].name;SHOPITEMS.push({id:'pet:e-'+e.id,cat:'Pets',n:'Mini '+v.charAt(0).toLowerCase()+v.slice(1),c:30+i*6,area:i+1})});
 
 /* ===== Website build: language data is loaded on demand from data/<lang>.js ===== */
-const LQ_VER='202610130756',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
+const LQ_VER='202610130824',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
 function lqClearCaches(){[poolCache,fullCache,bankCache,exIndex,trCache].forEach(c=>{if(c)for(const k in c)delete c[k]})}
 window.LQ_LOAD=function(lg,d){if(d.SBANK)SBANK[lg]=d.SBANK;if(d.EXB)EXB[lg]=d.EXB;if(d.TOPIC)TOPIC.data[lg]=d.TOPIC;if(d.BIG)BIG[lg]=d.BIG;if(d.TATO)TATO[lg]=d.TATO;
   if(d.SETS)Object.assign(SETS_DATA,d.SETS);if(d.TRAD)Object.assign(TRAD,d.TRAD);lqClearCaches();LQ_READY[lg]=true;(LQ_WAIT[lg]||[]).splice(0).forEach(f=>f())};
