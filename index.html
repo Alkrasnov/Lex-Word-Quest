@@ -396,7 +396,8 @@ body.talking #pad,body.talking #cornerMap{opacity:0;pointer-events:none!importan
 .ostlist{display:flex;flex-direction:column;gap:4px}.ostrow{display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;text-align:left;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(7,44,77,.4);color:#fff;font:inherit;cursor:pointer}
 .ostrow .num{opacity:.6;font-size:12px}.ostrow .nm{font-weight:600}.ostrow small{opacity:.75;font-size:11px}.ostrow.cur{background:var(--ltl-yellow);color:var(--ltl-blue);border-color:#fff}
 #heroWrap.powready{z-index:auto}#heroLex{z-index:2}
-#heroWrap #powBtn{position:absolute;left:50%;top:2%;transform:translate(-50%,-100%);white-space:nowrap;z-index:40;pointer-events:auto;background:#ff7a1a;color:#fff;border:3px solid #fff;font-weight:800;font-size:15px;padding:7px 14px;border-radius:999px;box-shadow:0 3px 0 #a8501a,0 0 14px rgba(255,255,255,.8);animation:micpulse 1s ease-in-out infinite}
+#heroWrap #powBtn{position:absolute;left:50%;top:2%;transform:translate(-50%,-100%);white-space:nowrap;z-index:40;pointer-events:auto;background:#ff7a1a;color:#fff;border:3px solid #fff;font-weight:800;font-size:15px;padding:7px 14px;border-radius:999px;box-shadow:0 3px 0 #a8501a,0 0 8px 2px rgba(255,170,60,.9);animation:powbtnglow 1.1s ease-in-out infinite}
+@keyframes powbtnglow{0%,100%{box-shadow:0 3px 0 #a8501a,0 0 6px 1px rgba(255,170,60,.85),0 0 0 0 rgba(255,220,120,.6)}50%{box-shadow:0 3px 0 #a8501a,0 0 18px 6px rgba(255,170,60,.95),0 0 30px 12px rgba(255,220,120,.45)}}
 #heroWrap.powready::before{content:'';position:absolute;inset:-22%;border-radius:50%;z-index:1;background:radial-gradient(circle,rgba(90,209,255,0) 30%,rgba(90,209,255,.55) 52%,rgba(160,235,255,.35) 62%,rgba(90,209,255,0) 72%);animation:aura 0.9s ease-in-out infinite alternate}
 #heroWrap.powready+#heroLex{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 6px #5ad1ff) drop-shadow(0 0 14px #5ad1ff);animation:powglow .9s ease-in-out infinite alternate}
 @keyframes aura{from{transform:scale(.9);opacity:.75}to{transform:scale(1.12);opacity:1}}
@@ -4012,7 +4013,7 @@ try{const pd=JSON.parse(localStorage.getItem('ltl-lex-pending')||'null');if(pd){
 ENEMIES.forEach((e,i)=>{const v=e.variants[0].name;SHOPITEMS.push({id:'pet:e-'+e.id,cat:'Pets',n:'Mini '+v.charAt(0).toLowerCase()+v.slice(1),c:30+i*6,area:i+1})});
 
 /* ===== Website build: language data is loaded on demand from data/<lang>.js ===== */
-const LQ_VER='202610131508',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
+const LQ_VER='202610131515',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
 function lqClearCaches(){[poolCache,fullCache,bankCache,exIndex,trCache].forEach(c=>{if(c)for(const k in c)delete c[k]})}
 window.LQ_LOAD=function(lg,d){if(d.SBANK)SBANK[lg]=d.SBANK;if(d.EXB)EXB[lg]=d.EXB;if(d.TOPIC)TOPIC.data[lg]=d.TOPIC;if(d.BIG)BIG[lg]=d.BIG;if(d.TATO)TATO[lg]=d.TATO;
   if(d.SETS)Object.assign(SETS_DATA,d.SETS);if(d.TRAD)Object.assign(TRAD,d.TRAD);lqClearCaches();LQ_READY[lg]=true;(LQ_WAIT[lg]||[]).splice(0).forEach(f=>f())};
