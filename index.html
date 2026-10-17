@@ -1835,7 +1835,7 @@ function areaLabel(a){if(S&&a===AREA&&state==='battle'){const c=COURSES[S.course
 function wordLabel(a){const ar=COURSES[S.course].areas,x=ar[Math.min(a,ar.length)-1]||ar[ar.length-1];if(!x)return COURSES[S.course].name;const [,part,parts,label]=x;return parts>1?`${label} (${part}/${parts})`:label}
 
 /* ================= Save ================= */
-const BUILD_ID='2026-10-16 15:57';
+const BUILD_ID='2026-10-17 13:53';
 const SAVE_BASE='ltl-lex-word-quest-v1';
 const SLOT=(()=>{try{return Math.min(3,Math.max(1,+localStorage.getItem('ltl-lex-slot')||1))}catch(e){return 1}})();
 const slotKey=n=>n===1?SAVE_BASE:SAVE_BASE+'-slot'+n;
@@ -1849,7 +1849,11 @@ const mode=()=>prefs.mode[lang]||'recognize';
 const TW={"信息":"資訊","出租车":"計程車","自行车":"腳踏車","打印":"列印","打印机":"印表機","方便面":"泡麵","短信":"簡訊","复印":"影印","互联网":"網際網路","网络":"網路","塑料":"塑膠","塑料袋":"塑膠袋","智能":"智慧","人工智能":"人工智慧","登录":"登入","光盘":"光碟","视频":"影片","搜索":"搜尋","软件":"軟體","硬件":"硬體","博客":"部落格","鼠标":"滑鼠","屏幕":"螢幕","网吧":"網咖","芯片":"晶片","服务器":"伺服器","数据库":"資料庫","数据":"資料","硬盘":"硬碟","激光":"雷射","在线":"線上","内存":"記憶體","兼容":"相容","磁盘":"磁碟","冰棍儿":"冰棒","性价比":"CP值","概率":"機率","几率":"機率","字体":"字型","地铁":"捷運","公交车":"公車","公共汽车":"公車","空调":"冷氣","酸奶":"優格","菠萝":"鳳梨","西红柿":"番茄","土豆":"馬鈴薯","质量":"品質","幼儿园":"幼稚園","摩托车":"機車","外卖":"外送","酒店":"飯店","宾馆":"旅館","充电宝":"行動電源","早上好":"早安","项目":"專案"};
 function twHits(t){const h=Object.keys(TW).filter(k=>t.includes(k));return h.filter(k=>!h.some(o=>o!==k&&o.includes(k)))}
 function twNote(t,code){code=code||lang;if(code!=='zh'||!prefs.trad)return '';const h=twHits(t);return h.map(k=>`<span lang="zh-Hant">${esc(dispL(code,k))}</span> → <span lang="zh-Hant">${esc(TW[k])}</span>`).join(', ')}
-const dispL=(code,t)=>(code==='zh'&&prefs.trad&&TRAD[t])||t;
+const tradCache={};
+function toTrad(t){if(!t)return t;if(TRAD[t])return TRAD[t];if(tradCache[t])return tradCache[t];let out='',i=0;
+  while(i<t.length){let hit=false;for(let L=Math.min(4,t.length-i);L>1;L--){const seg=t.substr(i,L);if(TRAD[seg]){out+=TRAD[seg];i+=L;hit=true;break}}if(!hit){out+=TRAD[t[i]]||t[i];i++}}
+  return tradCache[t]=out}
+const dispL=(code,t)=>(code==='zh'&&prefs.trad)?toTrad(t):t;
 const disp=t=>dispL(lang,t);
 /* Collection: every word/sentence the player has met, with seen/right/wrong counts (kept across new games) */
 function colFor(code){saves._col=saves._col||{};return saves._col[code]=saves._col[code]||{w:{},s:{}}}
@@ -2846,7 +2850,7 @@ drawRows(heroLex.getContext('2d'),LEX_UP,LEXPAL,0,0);
 const rnd=n=>Math.floor(Math.random()*n);
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
 function replay(el,cls){el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls)}
-function beginBattle(boss){{const rb=document.getElementById('runBtn');if(rb)rb.disabled=false}
+function beginBattle(boss){{const rb=document.getElementById('runBtn');if(rb){rb.disabled=false;rb.hidden=false}}{const sp=document.querySelector('.wset'),sb=document.getElementById('setBtn');if(sp)sp.hidden=true;if(sb)sb.classList.remove('on')}
   SFX.start();
   state='trans';keyOrder=[];
   const sc=document.getElementById('screen');sc.classList.remove('flash');void sc.offsetWidth;sc.classList.add('flash');
@@ -3059,7 +3063,7 @@ function addXp(n){let ups=0;S.xp+=n;while(S.xp>=need(S.lv)){S.xp-=need(S.lv);S.l
 function missedList(){if(!B.missed.length)return '<p>No mistakes. Perfect battle!</p>';
   return `<div class="missed">To review:<br>${B.missed.map(w=>`${sayBtn(w.t,lang)}<span lang="${LANGS[lang].html}">${esc(disp(w.t))}</span> ${w.r?`(${esc(w.r)}) `:''}= ${esc(w.m)}`).join('<br>')}</div>`}
 function victory(){
-  B.over=true;{const rb=document.getElementById('runBtn');if(rb)rb.disabled=true}{const pb=document.getElementById('powBtn'),hw=document.getElementById('heroWrap');if(pb)pb.hidden=true;if(hw)hw.classList.remove('powready')}stopMusic();SFX.victory();
+  B.over=true;{const rb=document.getElementById('runBtn');if(rb){rb.disabled=true;rb.hidden=true}}{const sp=document.querySelector('.wset'),sb=document.getElementById('setBtn');if(sp)sp.hidden=true;if(sb)sb.classList.remove('on')}{const pb=document.getElementById('powBtn'),hw=document.getElementById('heroWrap');if(pb)pb.hidden=true;if(hw)hw.classList.remove('powready')}stopMusic();SFX.victory();
   const a=AREA,total=B.slots.reduce((x,s)=>x+s.max,0),acc=B.asked?B.right/B.asked:1;
   // XP comes from enemies beaten and right answers (not enemy HP), rising gently with the area
   const nEn=B.slots.filter(s=>s.max).length,xp=Math.round((nEn*8+B.right*2+acc*12)*(1+.08*(a-1)))+(B.boss?40+8*a:0);
@@ -3088,7 +3092,7 @@ function victory(){
   document.getElementById('contBtn').onclick=()=>closeBattle(after);
   document.getElementById('contBtn').focus();
 }
-function defeat(){{const pb=document.getElementById('powBtn'),hw=document.getElementById('heroWrap');if(pb)pb.hidden=true;if(hw)hw.classList.remove('powready')}
+function defeat(){{const rb=document.getElementById('runBtn');if(rb){rb.disabled=true;rb.hidden=true}const sp=document.querySelector('.wset');if(sp)sp.hidden=true}{const pb=document.getElementById('powBtn'),hw=document.getElementById('heroWrap');if(pb)pb.hidden=true;if(hw)hw.classList.remove('powready')}
   B.over=true;stopMusic();SFX.defeatTune();
   const r=document.getElementById('result');
   r.innerHTML=`<h2>Lex is out of HP</h2><p>The ${EKIND.plural} got away this time. Lex heads back to ${AREA===1?'LTL school':'the LTL camp'} to rest.</p>${missedList()}<button class="bigbtn" id="contBtn">Rest up</button>`;
@@ -4040,7 +4044,7 @@ try{const pd=JSON.parse(localStorage.getItem('ltl-lex-pending')||'null');if(pd){
 ENEMIES.forEach((e,i)=>{const v=e.variants[0].name;SHOPITEMS.push({id:'pet:e-'+e.id,cat:'Pets',n:'Mini '+v.charAt(0).toLowerCase()+v.slice(1),c:30+i*6,area:i+1})});
 
 /* ===== Website build: language data is loaded on demand from data/<lang>.js ===== */
-const LQ_VER='202610171206',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
+const LQ_VER='202610171353',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
 function lqClearCaches(){[poolCache,fullCache,bankCache,exIndex,trCache].forEach(c=>{if(c)for(const k in c)delete c[k]})}
 window.LQ_LOAD=function(lg,d){if(d.SBANK)SBANK[lg]=d.SBANK;if(d.EXB)EXB[lg]=d.EXB;if(d.TOPIC)TOPIC.data[lg]=d.TOPIC;if(d.BIG)BIG[lg]=d.BIG;if(d.TATO)TATO[lg]=d.TATO;
   if(d.SETS)Object.assign(SETS_DATA,d.SETS);if(d.TRAD)Object.assign(TRAD,d.TRAD);lqClearCaches();LQ_READY[lg]=true;(LQ_WAIT[lg]||[]).splice(0).forEach(f=>f())};
