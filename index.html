@@ -1841,7 +1841,7 @@ function areaLabel(a){if(S&&a===AREA&&state==='battle'){const c=COURSES[S.course
 function wordLabel(a){const ar=COURSES[S.course].areas,x=ar[Math.min(a,ar.length)-1]||ar[ar.length-1];if(!x)return COURSES[S.course].name;const [,part,parts,label]=x;return parts>1?`${label} (${part}/${parts})`:label}
 
 /* ================= Save ================= */
-const BUILD_ID='2026-10-20 08:40';
+const BUILD_ID='2026-10-20 16:21';
 const SAVE_BASE='ltl-lex-word-quest-v1';
 const SLOT=(()=>{try{return Math.min(3,Math.max(1,+localStorage.getItem('ltl-lex-slot')||1))}catch(e){return 1}})();
 const slotKey=n=>n===1?SAVE_BASE:SAVE_BASE+'-slot'+n;
@@ -3240,10 +3240,72 @@ function switchSlot(n,pending){try{if(pending)localStorage.setItem('ltl-lex-pend
 const CLOUD_URL='https://lex-saves.zhaofengoffice.workers.dev';   // set to the Cloudflare Worker address to switch on save IDs
 const SAVE_APP='lex-word-quest';
 function exportSlot(n){return{app:SAVE_APP,v:1,slot:n,ts:Date.now(),data:slotData(n)}}
+/* ===== Short save codes (LEX2) =====
+   Words and sentences are stored as positions in the game's own word lists (not as text), meanings and readings
+   are looked up again on load, and the numbers are packed as bytes. Anything that doesn't match the lists exactly
+   (translated meanings, English mirror courses) is kept in full, so nothing is lost. */
+const SC_H=36e5;   // times are kept to the hour
+async function scEnsure(lgs){if(typeof loadLang==='function')for(const l of lgs){try{await loadLang(l,true)}catch(e){}}}
+function scLists(lg){const o=lang;lang=lg;const w=new Map(),s=new Map();
+  try{for(const c of COURSE_OF[lg]||[]){if(COURSES[c].mirrorOf)continue;for(const a of COURSES[c].areas){let rows=[];try{rows=rowsRaw(a[0])}catch(e){}for(const r of rows)if(r&&r.t&&!w.has(r.t))w.set(r.t,[r.m||'',r.r||'',r.k||''])}}
+      try{for(const r of bankList(lg))if(r&&r.t&&!s.has(r.t))s.set(r.t,[r.m||'',r.r||'',r.k||''])}catch(e){}}
+  finally{lang=o}
+  const sort=M=>{const k=[...M.keys()].sort();return{keys:k,pos:new Map(k.map((t,i)=>[t,i])),ref:M}};
+  return{w:sort(w),s:sort(s)}}
+function scHash(keys){let h=2166136261>>>0;for(const k of keys){for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619)>>>0}h^=10;h=Math.imul(h,16777619)>>>0}return h>>>0}
+function scW(){const b=[];const v=n=>{n=Math.max(0,Math.floor(n));while(n>127){b.push(n&127|128);n=Math.floor(n/128)}b.push(n)};
+  return{v,z:n=>v(n<0?-2*n-1:2*n),u32:n=>{for(let i=0;i<4;i++)b.push(n>>>(8*i)&255)},bytes:a=>{v(a.length);for(const x of a)b.push(x)},out:()=>new Uint8Array(b)}}
+function scR(b){let p=0;const v=()=>{let n=0,m=1,x;do{x=b[p++];if(x===undefined)throw new Error('format');n+=(x&127)*m;m*=128}while(x&128);return n};
+  return{v,z:()=>{const n=v();return n%2?-(n+1)/2:n/2},u32:()=>{let n=0;for(let i=0;i<4;i++)n+=b[p++]*2**(8*i);return n>>>0},bytes:()=>{const n=v(),a=b.slice(p,p+n);p+=n;return a}}}
+async function scZip(u8,f){const s=new Blob([u8]).stream().pipeThrough(new CompressionStream(f));return new Uint8Array(await new Response(s).arrayBuffer())}
+async function scUnzip(u8,f){const s=new Blob([u8]).stream().pipeThrough(new DecompressionStream(f));return new Uint8Array(await new Response(s).arrayBuffer())}
+/* text form: 14 bits per character in the CJK block (U+4E00–U+8DFF) — about 2.3× shorter than base64 and safe to paste in chat apps */
+function scToText(u8){let out='',acc=0,bits=0;const pre=[];let n=u8.length;do{pre.push(n&127|(n>127?128:0));n=Math.floor(n/128)}while(n>0);
+  const all=new Uint8Array(pre.length+u8.length);all.set(pre);all.set(u8,pre.length);
+  for(const x of all){acc=acc*256+x;bits+=8;while(bits>=14){bits-=14;out+=String.fromCharCode(0x4E00+Math.floor(acc/2**bits)%16384);acc%=2**bits}}
+  if(bits)out+=String.fromCharCode(0x4E00+(acc*2**(14-bits))%16384);return out}
+function scFromText(t){const a=[];let acc=0,bits=0;for(const ch of t){const c=ch.charCodeAt(0)-0x4E00;if(c<0||c>=16384)continue;acc=acc*16384+c;bits+=14;while(bits>=8){bits-=8;a.push(Math.floor(acc/2**bits)%256);acc%=2**bits}}
+  let n=0,m=1,p=0,x;do{x=a[p++];if(x===undefined)throw new Error('format');n+=(x&127)*m;m*=128}while(x&128);
+  if(a.length-p<n)throw new Error('format');return new Uint8Array(a.slice(p,p+n))}
+async function packShort(obj){
+  const d=JSON.parse(JSON.stringify(obj.data||{})),col=d._col||{},now=Date.now();delete d._cloud;
+  const langs=Object.keys(col).filter(l=>l!=='en'&&LANGS[l]);await scEnsure(langs);
+  const W=scW();W.v(2);W.v(Math.round(now/SC_H));W.v(obj.slot||0);
+  const done=[];
+  for(const lg of langs){const L=scLists(lg);
+    for(const k of ['w','s']){const C=col[lg]&&col[lg][k];if(!C)continue;const Li=L[k];if(!Li.keys.length)continue;
+      const ents=[];for(const t in C){const e=C[t],i=Li.pos.get(t),ref=i==null?null:Li.ref.get(t);
+        if(Array.isArray(e)&&ref&&ref[0]===(e[3]||'')&&ref[1]===(e[4]||'')&&ref[2]===(e[5]||'')&&(e[9]==null||e[9]===1||e[9]===0)){ents.push([i,e]);delete C[t]}}
+      if(!ents.length)continue;ents.sort((a,b)=>a[0]-b[0]);done.push([lg,k,Li.keys,ents])}}
+  for(const lg in col){for(const k of ['w','s'])if(col[lg][k]&&!Object.keys(col[lg][k]).length)delete col[lg][k];if(!Object.keys(col[lg]).length)delete col[lg]}
+  if(!Object.keys(col).length)delete d._col;
+  const js=new TextEncoder().encode(JSON.stringify(d));W.bytes(js);
+  W.v(done.length);
+  for(const [lg,k,keys,ents] of done){W.bytes(new TextEncoder().encode(lg+':'+k));W.u32(scHash(keys));W.v(keys.length);W.v(ents.length);let last=-1;
+    for(const [i,e] of ents){W.v(i-last-1);last=i;W.v(e[0]||0);W.v(e[1]||0);W.v(e[2]||0);
+      W.v(e[6]?Math.max(0,Math.round((now-e[6])/SC_H))+1:0);W.v((e[7]||0)*2+(e[9]===1?1:0));W.z(e[8]?Math.round((e[8]-now)/SC_H):-1e5)}}
+  return 'LEX2'+scToText(await scZip(W.out(),'deflate-raw'))}
+async function unpackShort(code){
+  const R=scR(await scUnzip(scFromText(code.slice(4)),'deflate-raw'));
+  if(R.v()!==2)throw new Error('format');const now=R.v()*SC_H,slot=R.v();
+  const d=JSON.parse(new TextDecoder().decode(R.bytes()));const n=R.v(),parts=[];
+  for(let j=0;j<n;j++){const [lg,k]=new TextDecoder().decode(R.bytes()).split(':'),h=R.u32(),len=R.v(),cnt=R.v(),rows=[];let last=-1;
+    for(let q=0;q<cnt;q++){const i=last+1+R.v();last=i;const s=R.v(),r=R.v(),w=R.v(),ls=R.v(),bh=R.v(),du=R.z();rows.push([i,s,r,w,ls,bh,du])}
+    parts.push({lg,k,h,len,rows})}
+  await scEnsure([...new Set(parts.map(p=>p.lg))]);
+  d._col=d._col||{};
+  for(const p of parts){const L=scLists(p.lg)[p.k];
+    if(scHash(L.keys)!==p.h||L.keys.length!==p.len){const e=new Error('version');e.version=true;throw e}
+    const C=((d._col[p.lg]=d._col[p.lg]||{w:{},s:{}})[p.k]=d._col[p.lg][p.k]||{});
+    for(const [i,s,r,w,ls,bh,du] of p.rows){const t=L.keys[i],ref=L.ref.get(t)||['','',''];
+      const e=[s,r,w,ref[0],ref[1],ref[2],ls?now-(ls-1)*SC_H:0,bh>>1,du===-1e5?0:now+du*SC_H];if(bh&1)e[9]=1;C[t]=e}}
+  for(const lg in d._col){d._col[lg].w=d._col[lg].w||{};d._col[lg].s=d._col[lg].s||{}}
+  return{app:SAVE_APP,v:1,slot,ts:now,data:d}}
 async function packCode(obj){const txt=JSON.stringify(obj);
   try{if(window.CompressionStream){const cs=new Blob([txt]).stream().pipeThrough(new CompressionStream('gzip'));const buf=new Uint8Array(await new Response(cs).arrayBuffer());let bin='';for(let i=0;i<buf.length;i+=8192)bin+=String.fromCharCode.apply(null,buf.subarray(i,i+8192));return 'LEX1:'+btoa(bin)}}catch(e){}
   return 'LEX0:'+btoa(unescape(encodeURIComponent(txt)))}
 async function unpackCode(code){code=(code||'').trim();
+  if(code.startsWith('LEX2'))return unpackShort(code.replace(/\s/g,''));
   if(code.startsWith('{'))return JSON.parse(code);
   if(code.startsWith('LEX1:')){const bin=atob(code.slice(5).replace(/\s/g,'')),buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
     const ds=new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));return JSON.parse(await new Response(ds).text())}
@@ -3279,9 +3341,9 @@ function showSaveTransfer(){
   document.getElementById('pickCancel').onclick=()=>{pending=null;document.getElementById('slotPick').hidden=true};
   document.getElementById('dlFile').onclick=()=>{try{const blob=new Blob([JSON.stringify(exportSlot(SLOT))],{type:'application/json'}),a=document.createElement('a');
     a.href=URL.createObjectURL(blob);a.download=`lex-word-quest-save-slot${SLOT}-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}catch(e){toast('Downloading isn\'t possible here. Use Copy save code instead.')}};
-  document.getElementById('cpCode').onclick=async()=>{const code=await packCode(exportSlot(SLOT)),box=document.getElementById('codeBox');box.value=code;box.select();
+  document.getElementById('cpCode').onclick=async()=>{let code;try{code=await packShort(exportSlot(SLOT))}catch(e){code=await packCode(exportSlot(SLOT))}const box=document.getElementById('codeBox');box.value=code;box.select();
     try{await navigator.clipboard.writeText(code);toast(`Save code copied (${code.length.toLocaleString()} characters). Paste it somewhere safe, like a note or a message to yourself.`)}catch(e){toast('The code is in the box. Select it all and copy it.')}};
-  document.getElementById('pasteLoad').onclick=async()=>{try{pick(await unpackCode(document.getElementById('codeBox').value))}catch(e){toast('That code doesn\'t look right. Make sure you copied all of it.')}};
+  document.getElementById('pasteLoad').onclick=async()=>{try{pick(await unpackCode(document.getElementById('codeBox').value))}catch(e){toast(e&&e.version?'This code was made in a different version of the game. Open the newest version on both devices, then make a new code.':'That code doesn\'t look right. Make sure you copied all of it.')}};
   document.getElementById('fileLoad').onclick=()=>document.getElementById('fileIn').click();
   document.getElementById('fileIn').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>unpackCode(t)).then(pick).catch(()=>toast('That file isn\'t a Lex\'s Word Quest save.'))};
   if(cloudOn){
@@ -4064,7 +4126,7 @@ try{const pd=JSON.parse(localStorage.getItem('ltl-lex-pending')||'null');if(pd){
 ENEMIES.forEach((e,i)=>{const v=e.variants[0].name;SHOPITEMS.push({id:'pet:e-'+e.id,cat:'Pets',n:'Mini '+v.charAt(0).toLowerCase()+v.slice(1),c:30+i*6,area:i+1})});
 
 /* ===== Website build: language data is loaded on demand from data/<lang>.js ===== */
-const LQ_VER='202610200840',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
+const LQ_VER='202610201621',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
 function lqClearCaches(){[poolCache,fullCache,bankCache,exIndex,trCache].forEach(c=>{if(c)for(const k in c)delete c[k]})}
 window.LQ_LOAD=function(lg,d){if(d.SBANK)SBANK[lg]=d.SBANK;if(d.EXB)EXB[lg]=d.EXB;if(d.TOPIC)TOPIC.data[lg]=d.TOPIC;if(d.BIG)BIG[lg]=d.BIG;if(d.TATO)TATO[lg]=d.TATO;
   if(d.SETS)Object.assign(SETS_DATA,d.SETS);if(d.TRAD)Object.assign(TRAD,d.TRAD);lqClearCaches();LQ_READY[lg]=true;(LQ_WAIT[lg]||[]).splice(0).forEach(f=>f())};
