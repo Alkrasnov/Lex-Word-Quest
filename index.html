@@ -406,6 +406,22 @@ body.talking #pad,body.talking #cornerMap{opacity:0;pointer-events:none!importan
 .buildid{grid-column:1/-1;text-align:center;font-size:11px;opacity:.6;margin:8px 0 0}
 #result{z-index:60}
 #stage.tall{justify-content:flex-start}
+/* Phone held sideways: battle in two columns (question and HP on the left, slimes on the right) so it all fits like on a computer */
+@media (orientation:landscape) and (max-height:560px){
+  #battle .bwrap{max-width:none;display:grid;grid-template-columns:minmax(250px,36%) 1fr;grid-template-rows:auto 1fr;gap:6px 10px;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+  #battle .wordwin{grid-column:1;grid-row:1;padding:6px 10px;align-self:start}
+  #battle #party{grid-column:1;grid-row:2;align-self:end;padding:6px 10px}
+  #battle #arena{grid-column:2;grid-row:1/3;min-height:0;height:100%}
+  #battle #bMsg{font-size:13px;max-height:34vh;overflow:auto}
+  #battle .wtools{flex-wrap:wrap;gap:4px}
+  #battle .wtools button{padding:5px 10px;font-size:12px}
+  #battle .q{font-size:11px}
+}
+@media (orientation:landscape) and (max-height:430px){
+  #battle .wordrow{transform:scale(.85);transform-origin:center}
+  #battle #bReading{font-size:15px}
+}
+
 .teamline .tslot{display:block;font-style:normal;font-size:12px;opacity:.75;margin:1px 0 2px}.teamline .tslot i{font-style:normal}
 .slot.queued .bubble{outline:3px dashed #FDD440;outline-offset:2px}
 /* Battle arena: Lex lower-left, slimes upper-right, facing each other diagonally */
@@ -1843,7 +1859,7 @@ function areaLabel(a){if(S&&a===AREA&&state==='battle'){const c=COURSES[S.course
 function wordLabel(a){const ar=COURSES[S.course].areas,x=ar[Math.min(a,ar.length)-1]||ar[ar.length-1];if(!x)return COURSES[S.course].name;const [,part,parts,label]=x;return parts>1?`${label} (${part}/${parts})`:label}
 
 /* ================= Save ================= */
-const BUILD_ID='2026-10-21 00:40';
+const BUILD_ID='2026-10-21 11:29';
 const SAVE_BASE='ltl-lex-word-quest-v1';
 const SLOT=(()=>{try{return Math.min(3,Math.max(1,+localStorage.getItem('ltl-lex-slot')||1))}catch(e){return 1}})();
 const slotKey=n=>n===1?SAVE_BASE:SAVE_BASE+'-slot'+n;
@@ -2794,7 +2810,8 @@ function onStep(){
 }
 function fitView(){
   const st=document.getElementById('stage'),side=matchMedia('(orientation:landscape) and (max-height:560px)').matches&&padMode()!=='off';
-  const W=st.clientWidth-8-(side?380:0),H=st.clientHeight-8;if(W<50||H<50)return;
+  const sideW=side?(()=>{const w=[...document.querySelectorAll('#pad .dpad,#pad #stick,#pad .abtn')].map(e=>e.offsetWidth||0);const mx=Math.max(120,...w);return Math.min(380,2*mx+44)})():0;   // room for the controls on both sides of the map
+  const W=st.clientWidth-8-sideW,H=st.clientHeight-8;if(W<50||H<50)return;
   let vw,vh;
   if(H>W*.95){vw=W<420?11:12;const sc=W/(vw*T);vh=Math.max(9,Math.min(24,Math.floor(H/(sc*T))))}
   else{vh=11;const sc=H/(vh*T);vw=Math.max(13,Math.min(20,Math.floor(W/(sc*T))))}
@@ -2805,7 +2822,9 @@ function fitView(){
 }
 addEventListener('resize',fitView);
 const padMode=()=>prefs.padMode||(prefs.hidePad?'off':'pad');
-function placePad(){const pad=document.getElementById('pad'),scr=document.getElementById('screen');if(!pad||!scr)return;const r=scr.getBoundingClientRect();if(!r.height)return;pad.style.bottom=Math.max(8,innerHeight-r.bottom+10)+'px';pad.style.left=Math.max(0,r.left)+'px';pad.style.right=Math.max(0,innerWidth-r.right)+'px'}
+function placePad(){const pad=document.getElementById('pad'),scr=document.getElementById('screen');if(!pad||!scr)return;const r=scr.getBoundingClientRect();if(!r.height)return;
+  if(matchMedia('(orientation:landscape) and (max-height:560px)').matches){pad.style.left='0px';pad.style.right='0px';pad.style.bottom=Math.max(8,innerHeight-r.bottom)+'px';return}   // phone sideways: controls sit beside the map, like on a computer
+  pad.style.bottom=Math.max(8,innerHeight-r.bottom+10)+'px';pad.style.left=Math.max(0,r.left)+'px';pad.style.right=Math.max(0,innerWidth-r.right)+'px'}
 addEventListener('resize',()=>setTimeout(placePad,60));
 {const _fv=fitView;fitView=function(){const r=_fv.apply(this,arguments);setTimeout(placePad,30);return r}}
 function applyPad(){const m=padMode(),pad=document.getElementById('pad'),b=document.getElementById('padBtn');
@@ -3068,7 +3087,7 @@ function layoutArena(){
     });
   });
 }
-addEventListener('resize',layoutArena);
+addEventListener('resize',layoutArena);addEventListener('orientationchange',()=>setTimeout(()=>{try{fitView();placePad();if(typeof B!=='undefined'&&B)layoutArena()}catch(e){}},250));
 function burst(host,n,colors,cls){
   for(let i=0;i<n;i++){const d=document.createElement('i');d.className='spark '+(cls||'');const an=Math.random()*Math.PI*2,r=26+Math.random()*30;
     d.style.setProperty('--dx',Math.cos(an)*r+'px');d.style.setProperty('--dy',Math.sin(an)*r-10+'px');d.style.background=colors[i%colors.length];
@@ -4165,7 +4184,7 @@ try{const pd=JSON.parse(localStorage.getItem('ltl-lex-pending')||'null');if(pd){
 ENEMIES.forEach((e,i)=>{const v=e.variants[0].name;SHOPITEMS.push({id:'pet:e-'+e.id,cat:'Pets',n:'Mini '+v.charAt(0).toLowerCase()+v.slice(1),c:30+i*6,area:i+1})});
 
 /* ===== Website build: language data is loaded on demand from data/<lang>.js ===== */
-const LQ_VER='202610210040',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
+const LQ_VER='202610211129',LQ_READY={},LQ_WAIT={},LQ_MREADY={},LQ_MWAIT={};
 function lqClearCaches(){[poolCache,fullCache,bankCache,exIndex,trCache].forEach(c=>{if(c)for(const k in c)delete c[k]})}
 window.LQ_LOAD=function(lg,d){if(d.SBANK)SBANK[lg]=d.SBANK;if(d.EXB)EXB[lg]=d.EXB;if(d.TOPIC)TOPIC.data[lg]=d.TOPIC;if(d.BIG)BIG[lg]=d.BIG;if(d.TATO)TATO[lg]=d.TATO;
   if(d.SETS)Object.assign(SETS_DATA,d.SETS);if(d.TRAD)Object.assign(TRAD,d.TRAD);lqClearCaches();LQ_READY[lg]=true;(LQ_WAIT[lg]||[]).splice(0).forEach(f=>f())};
